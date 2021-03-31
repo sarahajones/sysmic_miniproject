@@ -4,6 +4,7 @@
 %described by the Lotka-Volterra model
 
 %the modelling function exists as a local function within this script
+
 %% 1) EXPLORE THE LV MODEL
 %set up code to simulate system usinf the ODE45 solver
 
@@ -80,8 +81,8 @@ xlabel('Time ');
 ylabel('Population Level ');
 title('Model Behaviour: investigating steady state values')
 
-%the system reaches a steady state with X at 10000 and Y at 1100 - steady
-%state parameter functioning as expected. 
+%the system reaches a steady state with X at 10000 and Y at 1100 
+%steady state parameters functioning as expected. 
 
 
 %% 1.4) Systematically varying the initial conditions from the steady state
@@ -97,7 +98,7 @@ for i = 1: length(variations)
     title('Varying the Initial Conditions')
 end
   
-%with increaseed perturbation of the initial conditionss from the steady
+%with increaseed perturbation of the initial conditions from the steady
 %state values (leaving the rate constants unchanged) the following is
 %observed: 
 %the periods of the population cycles decrease(slowly)
@@ -205,33 +206,33 @@ ylabel('Population Level');
 title('Model behaviour when k1 is ecologically valid ');
 
 % visual assessment suggests that:
-%X is oscilating around 11800 and Y is around 3800
-
+%X is oscilating around 11800 and Y is around 3800 in the simulations
 
 %2.2) finding the steady state of the X and Y populations from the data
 %load in the behavioural file 
 data=readtable('Fur_Pelts_1900_to_1920.csv');
-
+%sort ddata into appropriate variables
 year = table2array(data(:,1));
 hare = table2array(data(:,2));
 lynx = table2array(data(:,3));
-
+%plot out the histroical data
 figure(25)
 plot(year,hare)
 hold on
 plot(year, lynx)
 title('Fur Pelts 1900 to 1920') 
 % visual assessment suggests that:
-%X is oscilating around 50000 and Y is around 30000
-k1 = median(k1); %take the median birth rate
-Xss = mean(hare);
-Yss = mean(lynx);
+%X is oscilating around 50000 and Y is around 30000, however, this is by
+%eye only
+k1 = median(k1); %take the median birth rate (from vector of 0:7 )
+Xss = mean(hare); %set the steady state of X to the mean of prey data
+Yss = mean(lynx);  %set the steady state of Y to the mean of the predator dat
 k2 = k1/Yss;
 k3 = k1*(Xss/Yss);
 
-
 x_ini = [hare(1), lynx(1)]; %reset the initial values
 p = [k1 k2 k3]; %reset params to hold the ecologically valid k1 value
+
 % Simulation: use the model_PP function to run the simulation
 [t,x]=ode45(@model_PP,t_range,x_ini,options,p);
 % Plot time series of all variables
@@ -245,18 +246,17 @@ title('Model behaviour: ecologically valid parameters');
 %model seems to run with too mnay oscillations, period too short. 
 %consider k1 again - this is not birth rate but population growth including
 %death rates. 
-%lower k1 to be a better estimation of popultion growth. 
-k1 = 0.5; 
-Xss = mean(hare);
-Yss = mean(lynx);
-k2 = k1/Yss;
-k3 = k1*(Xss/Yss);
+ 
+k1 = 0.5; %lower k1 to be a better estimation of population growth.
+k2 = k1/Yss; %use ss to find k2
+k3 = k1*(Xss/Yss); %use ss to find k3
 
 x_ini = [hare(1), lynx(1)]; %reset the initial values
 p = [k1 k2 k3]; %reset params to hold the ecologically valid k1 value
+
 % Simulation: use the model_PP function to run the simulation
-t_range = [1900:1920];
-[t,x]=ode45(@model_PP,t_range,x_ini,options,p);
+t_range = (1900:1920); %set the time range to equate to that of the historical data for plotting purposes
+[t,x]=ode45(@model_PP,t_range,x_ini,options,p); %run model
 % Plot time series of all variables
 figure(27);
 plot(t,x(:,:));
@@ -264,44 +264,42 @@ xlabel('Time ');
 ylabel('Population Level');
 title('Model behaviour: refitted ecologically valid parameters');
 
-% Plot time series of all variables
+% Plot time series of all variables and overlay histroical data
 figure(28);
 plot(t,x(:,:));
 xlabel('Time ');
 ylabel('Population Level');
-title('Model behaviourand histroical data');
-hold on 
-plot(year, lynx, 'Color', 'black')
+title('Model behaviour and historical data');
+hold on  
+plot(year, lynx, 'Color', 'black') %overlay lynx data
 hold on
-plot(year, hare, 'Color', 'black')
+plot(year, hare, 'Color', 'black') %overlay hare data
 
-%% Model extensions
-function exitflag = lynx_hare
+% %% Model extensions
+%refitting model using optimised values drawn from the lynx_hare_extension
+x_ini = [34913, 3856]; %value taken from lynx_hare_extension.m optimisation
+Xss = 34600; %derived as Xe in model extension
+Yss = 22100; %derived as Ye in model extension
 
-%Enter the data and the initial guess.
-td = t;
-p = [30 4 0.4 0.018 0.8 0.023];
+k1 = 0.4807; %value taken from lynx_hare_extension.m optimisiation
+k2 = k1/Yss; %use ss to find k2
+k3 = k1*(Xss/Yss); %use ss to find k3
 
-%Finally we use the fminsearch routine as follows:
+p = [k1 k2 k3]; 
 
-[p,fval,exitflag] = fminsearch(@leastcomp,p,[],td,hare,lynx);
-p
-fval
-end
-function J = leastcomp(p,tdata,xdata,ydata)
-%Create the least squares error function to be minimized.
-n1 = length(tdata);
-[t,y] = ode23(@lotvol,tdata,[p(1),p(2)],[],p(3),p(4),p(5),p(6));
-errx = y(:,1)-xdata(1:n1)';
-erry = y(:,2)-ydata(1:n1)';
-J = errx'*errx + erry'*erry;
-end
+% Simulation: use the model_PP function to run the simulation
+t_range = (1900:1920); %set the time range to equate to that of the historical data for plotting purposes
+[t,x]=ode45(@model_PP,t_range,x_ini,options,p); %run model
+figure(29);
+plot(t,x(:,:));
+xlabel('Time ');
+ylabel('Population Level');
+title('Optimised model and historical data');
+hold on 
+plot(year, lynx, 'Color', 'black') %overlay lynx data
+hold on
+plot(year, hare, 'Color', 'black') %overlay hare data
 
-function dydt = lotvol(t,y,a1,a2,b1,b2)
-tmp1 = a1*y(1) - a2*y(1)*y(2);
-tmp2 = -b1*y(2) + b2*y(1)*y(2);
-dydt = [tmp1; tmp2];
-end
 
 %% Local function - the model fitting function for the ode45 solver
 function dxdt= model_PP(t,x,p)
